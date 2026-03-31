@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Product Catalog ─────────────────────────────────────────────────
+
+model Product {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  name            String
+  category        String    // FRAMES, SUNGLASSES, ACCESSORIES, CARE
+  subcategory     String?   // e.g., "eyeglasses", "reading-glasses"
+  basePrice       Float
+  description     String?
+  material        String?   // acetate, metal, mixed, titanium
+  shape           String?   // round, square, rectangle, cat-eye, aviator, etc.
+  gender          String?   // unisex, men, women
+  widthCategory   String?   // narrow, medium, wide, extra-wide
+  bridgeFit       String?   // standard, low-bridge
+  isNewArrival    Boolean   @default(false)
+  isBestseller    Boolean   @default(false)
+  status          String    @default("LIVE") // CONCEPT, SAMPLE, PHOTOSHOOT, STAGED, LIVE, ARCHIVED
+  launchDate      DateTime?
+  retireDate      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  variants        ProductVariant[]
+  media           ProductMedia[]
+  tags            ProductTag[]
+  planogramSlots  PlanogramSlot[]
+  categoryPins    CategoryPin[]
+}
+
+model ProductVariant {
+  id              String    @id @default(cuid())
+  productId       String
+  colorName       String
+  colorHex        String?
+  sku             String?   @unique
+  price           Float?    // override base price if different
+  imageUrl        String?   // hero image for this colorway
+  isDefault       Boolean   @default(false)
+  inStock         Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductMedia {
+  id              String    @id @default(cuid())
+  productId       String
+  url             String
+  thumbnailUrl    String?
+  mediaType       String    // PRODUCT_SHOT, LIFESTYLE, FLAT_LAY, ON_MODEL, AR, VIDEO, UGC
+  altText         String?
+  sortOrder       Int       @default(0)
+  isPrimary       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ── Tags & Collections ──────────────────────────────────────────────
+
+model Tag {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  taxonomy        String    // collection, season, material, color, promo, style
+  color           String?
+
+  products        ProductTag[]
+}
+
+model ProductTag {
+  productId       String
+  tagId           String
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag             Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+}
+
+// ── Stores & Clustering ─────────────────────────────────────────────
+
+model Store {
+  id              String    @id @default(cuid())
+  storeCode       String    @unique
+  name            String
+  address         String?
+  city            String
+  state           String
+  zipCode         String?
+  region          String    // Northeast, Southeast, Midwest, West, Southwest
+  format          String    // FLAGSHIP, STANDARD, SHOP_IN_SHOP
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  clusterAssignments StoreClusterAssignment[]
+  complianceSubmissions ComplianceSubmission[]
+}
+
+model StoreCluster {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  clusterType     String    // format, region, demographic, performance, custom
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  storeAssignments    StoreClusterAssignment[]
+  planogramAssignments PlanogramClusterAssignment[]
+}
+
+model StoreClusterAssignment {
+  storeId         String
+  clusterId       String
+  store           Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  cluster         StoreCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, clusterId])
+}
+
+// ── Planograms ──────────────────────────────────────────────────────
+
+model Planogram {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  version         Int       @default(1)
+  status          String    @default("DRAFT") // DRAFT, REVIEW, APPROVED, ACTIVE, RETIRED
+  layoutData      String?   // JSON string for canvas layout
+  instructions    String?
+  complianceDeadline DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  slots               PlanogramSlot[]
+  clusterAssignments   PlanogramClusterAssignment[]
+  complianceSubmissions ComplianceSubmission[]
+  versions             PlanogramVersion[]
+}
+
+model PlanogramSlot {
+  id              String    @id @default(cuid())
+  planogramId     String
+  fixtureType     String    // WALL_UNIT, DISPLAY_TABLE, COUNTER, WINDOW_BAY
+  position        Int
+  productId       String?
+  notes           String?
+
+  planogram       Planogram @relation(fields: [planogramId], references: [id], onDelete: Cascade)
+  product         Product?  @relation(fields: [productId], references: [id])
+}
+
+model PlanogramClusterAssignment {
+  planogramId     String
+  clusterId       String
+  assignedAt      DateTime  @default(now())
+  planogram       Planogram    @relation(fields: [planogramId], references: [id], onDelete: Cascade)
+  cluster         StoreCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@id([planogramId, clusterId])
+}
+
+model PlanogramVersion {
+  id              String    @id @default(cuid())
+  planogramId     String
+  version         Int
+  layoutData      String?
+  changeNote      String?
+  createdAt       DateTime  @default(now())
+
+  planogram       Planogram @relation(fields: [planogramId], references: [id], onDelete: Cascade)
+}
+
+model ComplianceSubmission {
+  id              String    @id @default(cuid())
+  planogramId     String
+  storeId         String
+  photoUrls       String?   // JSON array of photo URLs
+  score           Float?    // 0-100 compliance score
+  status          String    @default("PENDING") // PENDING, REVIEWED, APPROVED, NEEDS_WORK
+  notes           String?
+  submittedAt     DateTime  @default(now())
+  reviewedAt      DateTime?
+
+  planogram       Planogram @relation(fields: [planogramId], references: [id], onDelete: Cascade)
+  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+// ── Online Merchandising ────────────────────────────────────────────
+
+model LandingPage {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  status          String    @default("DRAFT") // DRAFT, SCHEDULED, LIVE, ARCHIVED
+  blocks          String?   // JSON array of content blocks
+  publishAt       DateTime?
+  unpublishAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model CategoryMerchRule {
+  id              String    @id @default(cuid())
+  category        String    // which category page this rule applies to
+  ruleType        String    // SORT, PIN, BOOST, BURY
+  productId       String?   // for PIN rules
+  position        Int?      // for PIN rules (which position)
+  weight          Int?      // for BOOST/BURY (-100 to 100)
+  sortField       String?   // for SORT rules (bestsellers, newest, price)
+  sortDirection   String?   // ASC, DESC
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+}
+
+model CategoryPin {
+  id              String    @id @default(cuid())
+  category        String
+  productId       String
+  position        Int
+  isActive        Boolean   @default(true)
+
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([category, position])
+}
+
+// ── Campaigns ───────────────────────────────────────────────────────
+
+model Campaign {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  objective       String?   // awareness, conversion, clearance
+  status          String    @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, COMPLETED, CANCELLED
+  channels        String?   // JSON array: ["online", "in-store"]
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ── Lens Options ────────────────────────────────────────────────────
+
+model LensOption {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  type            String    // SINGLE_VISION, PROGRESSIVES, READERS, NON_RX
+  addOnName       String?   // BLUE_LIGHT, LIGHT_RESPONSIVE, POLARIZED
+  price           Float
+  description     String?
+  sortOrder       Int       @default(0)
+}
