@@ -10,7 +10,7 @@ const geistSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Prism — Warby Parker Merchandising",
+  title: "Vision — Warby Parker Merchandising",
   description: "Unified merchandising platform for online and in-store product management.",
 };
 

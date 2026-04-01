@@ -84,9 +84,9 @@ export function Sidebar() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
           <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">P</span>
+              <span className="text-white text-xs font-bold">V</span>
             </div>
-            <span className="text-base font-bold text-stone-900">Prism</span>
+            <span className="text-base font-bold text-stone-900">Vision</span>
           </Link>
           <button
             onClick={() => setMobileOpen(false)}
