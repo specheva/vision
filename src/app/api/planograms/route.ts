@@ -1,9 +1,7 @@
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { PlanogramList } from "@/components/planograms/PlanogramList";
 
-export const dynamic = "force-dynamic";
-
-export default async function PlanogramsPage() {
+export async function GET() {
   const planograms = await prisma.planogram.findMany({
     include: {
       slots: {
@@ -17,7 +15,5 @@ export default async function PlanogramsPage() {
     orderBy: { updatedAt: "desc" },
   });
 
-  return (
-    <PlanogramList planograms={JSON.parse(JSON.stringify(planograms))} />
-  );
+  return NextResponse.json(planograms);
 }

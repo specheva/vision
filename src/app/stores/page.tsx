@@ -1,13 +1,19 @@
-export default function Page() {
+import { prisma } from "@/lib/db";
+import { StoreDirectory } from "@/components/stores/StoreDirectory";
+
+export const dynamic = "force-dynamic";
+
+export default async function StoresPage() {
+  const stores = await prisma.store.findMany({
+    include: {
+      clusterAssignments: {
+        include: { cluster: true },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Ustores</h1>
-        <p className="text-sm text-stone-500 mt-1">Coming soon</p>
-      </div>
-      <div className="rounded-xl border border-stone-200 bg-white p-12 text-center">
-        <p className="text-stone-400">This module is under construction</p>
-      </div>
-    </div>
+    <StoreDirectory stores={JSON.parse(JSON.stringify(stores))} />
   );
 }

@@ -1,13 +1,31 @@
-export default function Page() {
+import { prisma } from "@/lib/db";
+import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
+
+export const dynamic = "force-dynamic";
+
+export default async function AnalyticsPage() {
+  const [productCount, storeCount, campaignCount, planogramCount] = await Promise.all([
+    prisma.product.count(),
+    prisma.store.count(),
+    prisma.campaign.count(),
+    prisma.planogram.count(),
+  ]);
+
+  const categoryBreakdown = await prisma.product.groupBy({
+    by: ["category"],
+    _count: true,
+  });
+
+  const regionBreakdown = await prisma.store.groupBy({
+    by: ["region"],
+    _count: true,
+  });
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Uanalytics</h1>
-        <p className="text-sm text-stone-500 mt-1">Coming soon</p>
-      </div>
-      <div className="rounded-xl border border-stone-200 bg-white p-12 text-center">
-        <p className="text-stone-400">This module is under construction</p>
-      </div>
-    </div>
+    <AnalyticsDashboard
+      stats={{ productCount, storeCount, campaignCount, planogramCount }}
+      categoryBreakdown={JSON.parse(JSON.stringify(categoryBreakdown))}
+      regionBreakdown={JSON.parse(JSON.stringify(regionBreakdown))}
+    />
   );
 }
